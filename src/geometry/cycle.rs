@@ -139,7 +139,7 @@ impl Cycle {
             //println!("polygon in question:\n{:#?}", vector_cycle);
             out.push(Cycle::new(vector_cycle.into_iter().map(|[p1, _]| p1).collect()));
             //println!("cycle b4 maruder:\n{:#?}", out.last().unwrap());
-            out.last_mut().unwrap().remove_maruders();
+            //out.last_mut().unwrap().remove_maruders();
             //println!("cycle after maruder:\n{:#?}", out.last().unwrap());
         }
         
@@ -222,6 +222,38 @@ impl Cycle {
 
         out.push([self.points.last().unwrap().clone(), self.points[0].clone()]);
 
+        return out;
+    }
+
+    pub fn min_x(&self) -> i32 {
+        let mut out = i32::MAX;
+        for i in self.points.iter() {
+            out = out.min(i.get_x());
+        }
+        return out;
+    }
+
+    pub fn min_y(&self) -> i32 {
+        let mut out = i32::MAX;
+        for i in self.points.iter() {
+            out = out.min(i.get_y());
+        }
+        return out;
+    }
+
+    pub fn max_x(&self) -> i32 {
+        let mut out = i32::MIN;
+        for i in self.points.iter() {
+            out = out.max(i.get_x());
+        }
+        return out;
+    }
+
+    pub fn max_y(&self) -> i32 {
+        let mut out = i32::MIN;
+        for i in self.points.iter() {
+            out = out.max(i.get_y());
+        }
         return out;
     }
 }

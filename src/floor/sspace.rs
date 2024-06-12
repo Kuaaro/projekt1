@@ -44,6 +44,10 @@ impl SSpace {
     pub fn get_cycle(&self) -> &Cycle {
         return &self.shape;
     }
+
+    pub fn remove_maruders(&mut self) {
+        self.shape.remove_maruders();
+    }
 }
 
 impl Disp for SSpace {

@@ -2,6 +2,7 @@ use std::sync::Mutex;
 use lazy_static::lazy_static;
 
 pub struct GlobalManager {
+    pub floor_type: char,
     pub max_height: i32,
     pub max_width: i32,
     pub mean: f32,
@@ -17,8 +18,11 @@ pub struct GlobalManager {
     pub tripple_window_length: i32,
     pub min_room_wall_length: i32,
     //pub point_eq_diff: f32,
-    pub min_room_area: i32
+    pub min_room_area: i32,
     //todo: maximal distance that is allowed for sspace to be from center
+    pub min_door_length: i32,
+    pub staircase_size: i32,
+    pub staircase_sspace: i32
 }
 
 impl GlobalManager {
@@ -71,6 +75,7 @@ impl GlobalManager {
 
 
     pub fn new() -> Self {
+        let floor_type = 'h';
         let max_height: i32 = 500;
         let max_width: i32 = 1000;
         let mean: f32 = 0.5;
@@ -84,6 +89,9 @@ impl GlobalManager {
         let min_room_wall_length: i32 = 20;
         let min_room_area: i32 = 600;
         //let point_eq_diff: f32 = 0.01;
+        let min_door_length = 50;
+        let staircase_size = 10;
+        let staircase_sspace = 10;
 
         let temp_window_length: i32 = (window_gap << 1)+window_width;
         let double_window_edge: i32 = window_distance_from_edge << 1;
@@ -92,6 +100,7 @@ impl GlobalManager {
         let tripple_window_length: i32 = 3*temp_window_length+double_window_edge;
 
         return GlobalManager{
+            floor_type,
             max_height,
             max_width,
             mean,
@@ -107,7 +116,10 @@ impl GlobalManager {
             tripple_window_length,
             min_room_wall_length,
             //point_eq_diff,
-            min_room_area
+            min_room_area,
+            min_door_length,
+            staircase_size,
+            staircase_sspace
         };
     }
 }
