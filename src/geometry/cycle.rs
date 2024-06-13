@@ -1,5 +1,3 @@
-use svg::node::element::Polygon;
-
 use crate::{constants, geometry::point::{Point, PointBasics}};
 
 #[derive(Clone)]
@@ -33,6 +31,33 @@ impl Cycle {
     }
 
     pub fn divide_cycle(&self, p1: &dyn PointBasics, p2: &dyn PointBasics) -> Vec<Cycle> {
+        let out = self.divide_cycle_without_limits(p1, p2);
+
+        let min_room_wall_length = constants::CONSTANTS.lock().unwrap().min_room_wall_length;
+        let min_room_area = constants::CONSTANTS.lock().unwrap().min_room_area;
+
+        if out.len() == 1 {
+            return out;
+        }
+
+        if (out[0].points[0].get_x()-out[0].points[2].get_x()).abs() < min_room_wall_length || (out[0].points[0].get_y()-out[0].points[2].get_y()).abs() < min_room_wall_length {
+            return vec![self.clone()];
+        }
+
+        if (out[1].points[0].get_x()-out[1].points[2].get_x()).abs() < min_room_wall_length || (out[1].points[0].get_y()-out[1].points[2].get_y()).abs() < min_room_wall_length {
+            return vec![self.clone()];
+        }
+
+        if out[0].get_area() < min_room_area || out[1].get_area() < min_room_area {
+            return vec![self.clone()];
+        }
+
+        
+
+        return out;
+    }
+
+    pub fn divide_cycle_without_limits(&self, p1: &dyn PointBasics, p2: &dyn PointBasics) -> Vec<Cycle> { 
         let mut last_point: &Point = self.points.last().unwrap();
     
         let mut last_side: i32 = Point::which_side(last_point, p1, p2);
@@ -64,34 +89,10 @@ impl Cycle {
 
         let c1 = Cycle::new(c1v);
         let c2 = Cycle::new(c2v);
-    
-        //println!("{} {} {} {}", p1.get_x(), p1.get_y(), p2.get_x(), p2.get_y());
-        //println!("og: {:?}", self);
-        //println!("1:{:?}", c1);
-        //println!("2:{:?}", c2);
-
-        let min_room_wall_length = constants::CONSTANTS.lock().unwrap().min_room_wall_length;
-        let min_room_area = constants::CONSTANTS.lock().unwrap().min_room_area;
-        
 
         if c1.points.len() < 4 || c2.points.len() < 4 {
             return vec![self.clone()];
-
         }
-
-        if (c1.points[0].get_x()-c1.points[2].get_x()).abs() < min_room_wall_length || (c1.points[0].get_y()-c1.points[2].get_y()).abs() < min_room_wall_length {
-            return vec![self.clone()];
-        }
-
-        if (c2.points[0].get_x()-c2.points[2].get_x()).abs() < min_room_wall_length || (c2.points[0].get_y()-c2.points[2].get_y()).abs() < min_room_wall_length {
-            return vec![self.clone()];
-        }
-
-        if c1.get_area() < min_room_area || c2.get_area() < min_room_area {
-            return vec![self.clone()];
-        }
-
-        
 
         return vec![c1, c2];
     }
@@ -112,35 +113,15 @@ impl Cycle {
         return area.abs() >> 1;
     }
 
-    pub fn into_polygon(cycle: &Cycle) -> Polygon {        
-        let mut nodes: Vec<(i32, i32)> = Vec::with_capacity(cycle.points.len());
-
-        for node in cycle.points.iter() {
-            nodes.push((node.get_x(), node.get_y()));
-        }
-
-        return Polygon::new().set("points", nodes);
-    }
-
     pub fn connect_cycles(vec_in: &Vec<&Cycle>) -> Vec<Cycle> {
         let arr: Vec<[Point; 2]> = vec_in.iter().map(|c| c.into_segments()).flatten().collect();
-        //println!("OG:\n{:#?}", arr);
         let mut vec: Vec<[Point; 2]> = arr.clone().into_iter().filter(|[p1, p2]| !arr.contains(&[p2.clone(), p1.clone()])).collect();
-
-        //println!("left:\n{:#?}", vec);
-        //println!("removed:\n{:#?}", arr.clone().into_iter().filter(|[p1, p2]| arr.contains(&[p2.clone(), p1.clone()])).collect::<Vec<[Point; 2]>>());
         
         let mut out: Vec<Cycle> = Vec::new();
         while vec.len() > 0 {
             Cycle::segment_to_front(&mut vec);
-            //println!("b4 segment finding:\n{:#?}", vec);
             let vector_cycle = Cycle::segments_to_polygon(&mut vec);
-            //println!("after after finding polygon:\n{:#?}", vec);
-            //println!("polygon in question:\n{:#?}", vector_cycle);
             out.push(Cycle::new(vector_cycle.into_iter().map(|[p1, _]| p1).collect()));
-            //println!("cycle b4 maruder:\n{:#?}", out.last().unwrap());
-            //out.last_mut().unwrap().remove_maruders();
-            //println!("cycle after maruder:\n{:#?}", out.last().unwrap());
         }
         
         return out;
@@ -165,16 +146,6 @@ impl Cycle {
         }
     }
 
-    pub fn from_segments(vec: &Vec<[Point; 2]>) -> Self{
-        let mut out_points: Vec<Point> = Vec::with_capacity(vec.len());
-
-        for [p, _] in vec.iter() {
-            out_points.push(p.clone());
-        }
-
-        return Cycle::new(out_points);
-    }
-
     fn segment_to_front(vec: &mut Vec<[Point; 2]>) {
         let mut min_x: i32 = i32::MAX;
         let mut min_y: i32 = i32::MAX;
@@ -195,9 +166,7 @@ impl Cycle {
     fn segments_to_polygon(vec: &mut Vec<[Point; 2]>) -> Vec<[Point; 2]> {
         for index0 in 0..vec.len()-2 {
             let [_, p0] = &vec[index0];
-            //println!("vec len: {}", vec.len());
             for index_s in (index0+1)..vec.len() {
-                //println!("{}", index_s);
                 let [p_s, _] = vec.get(index_s).unwrap();
                 if p_s==p0 {
                     vec.swap(index_s, index0+1);

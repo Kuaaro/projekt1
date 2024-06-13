@@ -1,6 +1,26 @@
 use std::sync::Mutex;
 use lazy_static::lazy_static;
 
+pub const FLOOR_TYPE: char = 'h';
+pub const MAX_HEIGHT: i32 = 500;
+pub const MAX_WIDTH: i32 = 1000;
+pub const MEAN: f32 = 0.5;
+pub const VARIANCE: f32 = 0.2;
+pub const WINDOW_WIDTH: i32 = 50;
+pub const WINDOW_GAP: i32 = 25;
+pub const WINDOW_DISTANCE_FROM_EDGE: i32 = 30;
+pub const SINGLE_WINDOW_PROPABILITY: f32 = 0.7;
+pub const DOUBLE_WINDOW_PROPABILITY: f32 = 0.5;
+pub const TRIPPLE_WINDOW_PROPABILITY: f32 = 0.3;
+pub const MIN_ROOM_WALL_LENGTH: i32 = 20;
+pub const MIN_ROOM_AREA: i32 = 600;
+pub const MIN_DOOR_LENGTH: i32 = 50;
+pub const STAIRCASE_SIZE: i32 = 10;
+pub const STAIRCASE_SSPACE: i32 = 10;
+pub const DISTANCE_METHOD: char = 'r';
+pub const WEIGHTS_USED: bool = true;
+pub const PORK_BELLY: i32 = 20;
+
 pub struct GlobalManager {
     pub floor_type: char,
     pub max_height: i32,
@@ -22,104 +42,44 @@ pub struct GlobalManager {
     //todo: maximal distance that is allowed for sspace to be from center
     pub min_door_length: i32,
     pub staircase_size: i32,
-    pub staircase_sspace: i32
+    pub staircase_sspace: i32,
+    pub distance_method: char,
+    pub weights_used: bool
 }
 
 impl GlobalManager {
-    pub fn set_max_height(&mut self, max_height: i32) {
-        self.max_height=max_height;
-    }
-    pub fn set_max_width(&mut self, max_width: i32) {
-        self.max_width=max_width;
-    }
-    pub fn set_variance(&mut self, variance: f32) {
-        self.variance=variance;
-    }
-    pub fn set_window_width(&mut self, window_width: i32) {
-        self.window_width=window_width;
-        self.update_window_lengths();
-    }
-    pub fn set_window_gap(&mut self, window_gap: i32) {
-        self.window_gap=window_gap;
-        self.update_window_lengths();
-    }
-    pub fn set_window_distance_from_edge(&mut self, window_distance_from_edge: i32) {
-        self.window_distance_from_edge=window_distance_from_edge;
-        self.update_window_lengths();
-    }
-    pub fn set_single_window_propability(&mut self, single_window_propability: f32) {
-        self.single_window_propability=single_window_propability;
-    }
-    pub fn set_double_window_propability(&mut self, double_window_propability: f32) {
-        self.double_window_propability=double_window_propability;
-    }
-    pub fn set_tripple_window_propability(&mut self, tripple_window_propability: f32) {
-        self.tripple_window_propability=tripple_window_propability;
-    }
-    pub fn set_min_room_wall_length(&mut self, min_room_wall_length: i32) {
-        //todo: Zmiana minimalnego pola, żeby nie było mniejsze
-        self.min_room_wall_length=min_room_wall_length;
-    }
-
-    pub fn set_min_room_area(&mut self, max_height: i32) {
-        self.max_height=max_height;
-    }
-
-    fn update_window_lengths(&mut self) {
-        let temp_window_length: i32 = (self.window_gap << 1)+self.window_width;
-        let double_window_edge: i32 = self.window_distance_from_edge << 1;
-        self.single_window_length = temp_window_length+double_window_edge;
-        self.double_window_length = 2*temp_window_length+double_window_edge;
-        self.tripple_window_length = 3*temp_window_length+double_window_edge;
-    }
-
 
     pub fn new() -> Self {
-        let floor_type = 'h';
-        let max_height: i32 = 500;
-        let max_width: i32 = 1000;
-        let mean: f32 = 0.5;
-        let variance: f32 = 0.2;
-        let window_width: i32 = 50;
-        let window_gap: i32 = 25;
-        let window_distance_from_edge: i32 = 30;
-        let single_window_propability: f32 = 0.7;
-        let double_window_propability: f32 = 0.5;
-        let tripple_window_propability: f32 = 0.3;
-        let min_room_wall_length: i32 = 20;
-        let min_room_area: i32 = 600;
-        //let point_eq_diff: f32 = 0.01;
-        let min_door_length = 50;
-        let staircase_size = 10;
-        let staircase_sspace = 10;
 
-        let temp_window_length: i32 = (window_gap << 1)+window_width;
-        let double_window_edge: i32 = window_distance_from_edge << 1;
+
+        let temp_window_length: i32 = (WINDOW_GAP << 1)+WINDOW_WIDTH;
+        let double_window_edge: i32 = WINDOW_DISTANCE_FROM_EDGE << 1;
         let single_window_length: i32 = temp_window_length+double_window_edge;
         let double_window_length: i32 = 2*temp_window_length+double_window_edge;
         let tripple_window_length: i32 = 3*temp_window_length+double_window_edge;
 
         return GlobalManager{
-            floor_type,
-            max_height,
-            max_width,
-            mean,
-            variance,
-            window_width,
-            window_gap,
-            window_distance_from_edge,
-            single_window_propability,
-            double_window_propability,
-            tripple_window_propability,
+            floor_type: FLOOR_TYPE,
+            max_height: MAX_HEIGHT,
+            max_width: MAX_HEIGHT,
+            mean: MEAN,
+            variance: VARIANCE,
+            window_width: WINDOW_WIDTH,
+            window_gap: WINDOW_GAP,
+            window_distance_from_edge: WINDOW_DISTANCE_FROM_EDGE,
+            single_window_propability: SINGLE_WINDOW_PROPABILITY,
+            double_window_propability: DOUBLE_WINDOW_PROPABILITY,
+            tripple_window_propability: TRIPPLE_WINDOW_PROPABILITY,
             single_window_length,
             double_window_length,
             tripple_window_length,
-            min_room_wall_length,
-            //point_eq_diff,
-            min_room_area,
-            min_door_length,
-            staircase_size,
-            staircase_sspace
+            min_room_wall_length: MIN_ROOM_WALL_LENGTH,
+            min_room_area: MIN_ROOM_AREA,
+            min_door_length: MIN_DOOR_LENGTH,
+            staircase_size: STAIRCASE_SIZE,
+            staircase_sspace: STAIRCASE_SSPACE,
+            distance_method: DISTANCE_METHOD,
+            weights_used: WEIGHTS_USED
         };
     }
 }

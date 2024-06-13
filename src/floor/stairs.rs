@@ -13,9 +13,9 @@ pub struct Stairs {
 
 impl Disp for Stairs {
     fn disp(&self, mut doc: svg::node::element::SVG) -> svg::node::element::SVG {
-        let staircase_size = constants::CONSTANTS.lock().unwrap().staircase_size;
+        let staircase_size = constants::CONSTANTS.lock().unwrap().staircase_size >> 1;
         doc = doc.add(Polygon::new()
-            .set("points", vec![(self.center.get_x()-10, self.center.get_y()-10), (self.center.get_x()+10, self.center.get_y()-10),(self.center.get_x()+10, self.center.get_y()+10),(self.center.get_x()-10, self.center.get_y()+10)])
+            .set("points", vec![(self.center.get_x()-staircase_size, self.center.get_y()-staircase_size), (self.center.get_x()+staircase_size, self.center.get_y()-staircase_size),(self.center.get_x()+staircase_size, self.center.get_y()+staircase_size),(self.center.get_x()-staircase_size, self.center.get_y()+staircase_size)])
             .set("fill", "gray"));
         return doc;
     }

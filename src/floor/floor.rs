@@ -1,16 +1,13 @@
 use svg::node::element::{Line, Polygon, SVG};
-use std::cmp::min;
-use rand::{random, thread_rng, Rng};
-use rand_distr::num_traits::abs;
-use svg::Document;
+use rand::Rng;
 
 use crate::constants;
 use crate::floor::sspace::SSpace;
-use crate::floor::center::{Center, CenterBasics};
-use crate::geometry::point::{self, Point, PointBasics};
+use crate::floor::center::CenterBasics;
+use crate::geometry::point::{Point, PointBasics};
 use crate::geometry::cycle::Cycle;
 use crate::nat_dis_num_gen::NatDisNumGen;
-use crate::{constants::CONSTANTS, nat_dis_num_gen};
+use crate::nat_dis_num_gen;
 
 use super::stairs::Stairs;
 use super::window::Window;
@@ -56,6 +53,9 @@ impl Disp for Floor {
 
 impl Floor {
     pub fn assign_sspaces(&mut self) {
+        let distance_method = constants::CONSTANTS.lock().unwrap().distance_method;
+        let weights_used = constants::CONSTANTS.lock().unwrap().weights_used;
+
         let mut distance: f32;
         let mut min_distance: f32;
 
@@ -63,7 +63,18 @@ impl Floor {
             min_distance = f32::MAX;
             
             for (center_id, center) in self.centers.iter().enumerate() {
-                distance = center.get_weight() / Point::distance(sspace.get_center(), center.into_point_basics());
+                distance = match distance_method {
+                    'r' => Point::distance(sspace.get_center(), center.into_point_basics()) as f32,
+                    's' => Point::square_distance(sspace.get_center(), center.into_point_basics()) as f32,
+                    'c' => Point::city_distance(sspace.get_center(), center.into_point_basics()) as f32, 
+                    _ => 0.
+                };
+
+                if weights_used {
+                    distance *= center.get_weight();
+                }
+                
+                
 
                 if distance < min_distance {
                     min_distance = distance;
@@ -76,6 +87,11 @@ impl Floor {
     pub fn divide_floor(&mut self, p1: &dyn PointBasics, p2: &dyn PointBasics) {
         let sspaces = std::mem::replace(&mut self.rooms, Vec::new());
         self.rooms.extend(sspaces.into_iter().map(|s| s.divide_sspace(p1, p2)).flatten());
+    }
+
+    pub fn divide_floor_without_limits(&mut self, p1: &dyn PointBasics, p2: &dyn PointBasics) {
+        let sspaces = std::mem::replace(&mut self.rooms, Vec::new());
+        self.rooms.extend(sspaces.into_iter().map(|s| s.divide_sspace_without_limits(p1, p2)).flatten());
     }
 
     pub fn random_floor() -> Self {
@@ -92,9 +108,9 @@ impl Floor {
         out.divide_by_centers();
         out.assign_sspaces();
 
-        //out.combine_sspaces();
-        //out.add_doors();
-        //out.remove_maruders();
+        out.combine_sspaces();
+        out.add_doors();
+        out.remove_maruders();
 
         return out;
     }
@@ -107,11 +123,11 @@ impl Floor {
 
         let mut out: Floor = Floor::empty_square();
 
-        let rdm_x = rnd_gen.range_gen(100, max_width-100);
-        let rdm_y = rnd_gen.range_gen(100, max_height-100);
+        let rdm_x = rnd_gen.range_gen(1, max_width-1);
+        let rdm_y = rnd_gen.range_gen(1, max_height-1);
 
-        out.divide_floor(&Point::new(0, rdm_y), &Point::new(max_width, rdm_y));
-        out.divide_floor(&Point::new(rdm_x, 0), &Point::new(rdm_x, max_height));
+        out.divide_floor_without_limits(&Point::new(0, rdm_y+constants::PORK_BELLY), &Point::new(max_width, rdm_y+constants::PORK_BELLY));
+        out.divide_floor_without_limits(&Point::new(rdm_x+constants::PORK_BELLY, 0), &Point::new(rdm_x+constants::PORK_BELLY, max_height));
         
         out.rm_room(rand::thread_rng().gen_range(0..3));
 
@@ -126,14 +142,14 @@ impl Floor {
 
         let mut out: Floor = Floor::empty_square();
 
-        let rdm_x = rnd_gen.range_gen(1, max_width >>1);
-        let rdm_y = rnd_gen.range_gen(1, max_height >>1);
+        let rdm_x = rnd_gen.range_gen(1, (max_width-1)>>1);
+        let rdm_y = rnd_gen.range_gen(11, (max_height-1)>>1);
 
-        out.divide_floor(&Point::new(0, rdm_y), &Point::new(max_width, rdm_y));
-        out.divide_floor(&Point::new(rdm_x, 0), &Point::new(rdm_x, max_height));
+        out.divide_floor_without_limits(&Point::new(0, rdm_y+constants::PORK_BELLY), &Point::new(max_width, rdm_y+constants::PORK_BELLY));
+        out.divide_floor_without_limits(&Point::new(rdm_x+constants::PORK_BELLY, 0), &Point::new(rdm_x+constants::PORK_BELLY, max_height));
 
-        out.divide_floor(&Point::new(0, max_height-rdm_y), &Point::new(max_width, max_height-rdm_y));
-        out.divide_floor(&Point::new(max_width-rdm_x, 0), &Point::new(max_width-rdm_x, max_height));
+        out.divide_floor_without_limits(&Point::new(0, max_height-rdm_y+constants::PORK_BELLY), &Point::new(max_width, max_height-rdm_y+constants::PORK_BELLY));
+        out.divide_floor_without_limits(&Point::new(max_width-rdm_x+constants::PORK_BELLY, 0), &Point::new(max_width-rdm_x+constants::PORK_BELLY, max_height));
 
         out.rm_room(6);
         out.rm_room(1);
@@ -149,13 +165,13 @@ impl Floor {
 
         let mut out: Floor = Floor::empty_square();
 
-        let rdm = rnd_gen.range_gen(1, (max_width.min(max_height)) >>1);
+        let rdm = rnd_gen.range_gen(1, (max_width.min(max_height)-1) >>1)+constants::PORK_BELLY;
 
-        out.divide_floor(&Point::new(0, rdm), &Point::new(max_width, rdm));
-        out.divide_floor(&Point::new(rdm, 0), &Point::new(rdm, max_height));
+        out.divide_floor_without_limits(&Point::new(0, rdm), &Point::new(max_width, rdm));
+        out.divide_floor_without_limits(&Point::new(rdm, 0), &Point::new(rdm, max_height));
 
-        out.divide_floor(&Point::new(0, max_height-rdm), &Point::new(max_width, max_height-rdm));
-        out.divide_floor(&Point::new(max_width-rdm, 0), &Point::new(max_width-rdm, max_height));
+        out.divide_floor_without_limits(&Point::new(0, max_height-rdm), &Point::new(max_width, max_height-rdm));
+        out.divide_floor_without_limits(&Point::new(max_width-rdm, 0), &Point::new(max_width-rdm, max_height));
 
         out.rm_room(8);
         out.rm_room(5);
@@ -169,11 +185,11 @@ impl Floor {
         let max_width = constants::CONSTANTS.lock().unwrap().max_width;
         let max_height = constants::CONSTANTS.lock().unwrap().max_height;
 
-        return Floor{rooms: vec![SSpace::new(Cycle::new(vec![Point::new(10, max_height+10), Point::new(max_width+10, max_height+10), Point::new(max_width+10, 10), Point::new(10, 10)]))], centers: Vec::new(), doors: Vec::new()};
+        return Floor{rooms: vec![SSpace::new(Cycle::new(vec![Point::new(constants::PORK_BELLY, max_height+constants::PORK_BELLY), Point::new(max_width+constants::PORK_BELLY, max_height+constants::PORK_BELLY), Point::new(max_width+constants::PORK_BELLY, constants::PORK_BELLY), Point::new(constants::PORK_BELLY, constants::PORK_BELLY)]))], centers: Vec::new(), doors: Vec::new()};
     }
 
     fn rm_room(&mut self, index: usize) {
-        let cycle = self.rooms.remove(index);
+        self.rooms.remove(index);
     }
 
 
@@ -269,7 +285,7 @@ impl Floor {
         let mut candidates: Vec<&([Point; 2], [u16; 2])>;
         let mut sub_candidates: Vec<&([Point; 2], [u16; 2])>;
 
-        for (index, ([p1, p2], id)) in borders_with_sspaces.iter().enumerate() {
+        for ([p1, p2], id) in borders_with_sspaces.iter() {
             if borders_with_both_sides.iter().any(|([p1s, p2s], _)| p1s==p2 && p2s==p1) {
                 continue;
             }
@@ -304,11 +320,11 @@ impl Floor {
             } else {
                 if p1.get_x()==p2.get_x() {
                     let min_y = p1.get_y().min(p2.get_y());
-                    let rdm = rand_gen.gen_range(0..(p1.get_y()-p2.get_y()).abs()-min_door_length);
+                    let rdm = rand_gen.gen_range(0..(p1.get_y()-p2.get_y()).abs()-min_door_length+1);
                     [Point::new(p1.get_x(), min_y+rdm), Point::new(p1.get_x(), min_y+min_door_length+rdm)]
                 } else {
                     let min_x = p1.get_x().min(p2.get_x());
-                    let rdm = rand_gen.gen_range(0..(p1.get_x()-p2.get_x()).abs()-min_door_length);
+                    let rdm = rand_gen.gen_range(0..(p1.get_x()-p2.get_x()).abs()-min_door_length+1);
                     [Point::new(min_x+rdm, p1.get_y()), Point::new(min_x+min_door_length+rdm, p1.get_y())]
                 }
             }
@@ -353,7 +369,6 @@ impl Floor {
         let mut rdm_gen = rand::thread_rng();
 
         let pos_sspaces = self.rooms.iter().filter(|sspace| {
-            let points = sspace.get_points();
             let x_dist = sspace.get_cycle().max_x()-sspace.get_cycle().min_x();
             let y_dist = sspace.get_cycle().max_y()-sspace.get_cycle().min_y();
             return x_dist >= staircase_size && y_dist >= staircase_size;
@@ -379,7 +394,6 @@ impl Floor {
     fn add_stairs_to_sspace(sspace: &SSpace) -> Stairs {
         let staircase_size = constants::CONSTANTS.lock().unwrap().staircase_size;
         let staircase_sspace = constants::CONSTANTS.lock().unwrap().staircase_sspace;
-        let min_value = (staircase_size + staircase_sspace) << 1;
         let mut rdm_gen = nat_dis_num_gen::NatDisNumGen::new_const();
 
         let x = rdm_gen.range_gen(sspace.get_cycle().min_x()+staircase_size+staircase_sspace, sspace.get_cycle().max_x()-staircase_size-staircase_sspace);

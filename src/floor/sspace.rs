@@ -17,10 +17,6 @@ impl SSpace {
         return SSpace{center: shape.get_mass_center(), shape, id: 0};
     }
 
-    pub fn new_with_id(shape: Cycle, id: u16) -> Self {
-        return SSpace{center: shape.get_mass_center(), shape, id};
-    }
-
     pub fn assign_id(&mut self, id: u16) {
         self.id = id;
     }
@@ -35,11 +31,12 @@ impl SSpace {
 
     pub fn divide_sspace(&self, p1: &dyn PointBasics, p2: &dyn PointBasics) -> Vec<SSpace>{
         return self.shape.divide_cycle(p1, p2).into_iter().filter(|c: &Cycle| c.get_points().len() > 3).map(|v| SSpace::new(v)).collect();
-        }
-
-    pub fn get_points(&self) -> &Vec<Point> {
-        return self.shape.get_points();
     }
+
+    pub fn divide_sspace_without_limits(&self, p1: &dyn PointBasics, p2: &dyn PointBasics) -> Vec<SSpace>{
+        return self.shape.divide_cycle_without_limits(p1, p2).into_iter().filter(|c: &Cycle| c.get_points().len() > 3).map(|v| SSpace::new(v)).collect();
+    }
+
 
     pub fn get_cycle(&self) -> &Cycle {
         return &self.shape;
